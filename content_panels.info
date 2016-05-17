@@ -1,0 +1,5 @@
+name = Content Panels
+description = Allows to use entities view modes as content panels.
+core = 7.x
+dependencies[] = ctools
+dependencies[] = entity

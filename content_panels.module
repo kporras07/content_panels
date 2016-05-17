@@ -1,0 +1,92 @@
+<?php
+
+/**
+ * @file
+ * Module file for content_panels.
+ */
+
+/**
+ * Implements hook_ctools_plugin_directory().
+ */
+function content_panels_ctools_plugin_directory($owner, $plugin_type) {
+  if ($owner === 'ctools' && $plugin_type === 'content_types') {
+    return 'plugins/content_types';
+  }
+}
+
+/**
+ * Implements hook_entity_insert().
+ */
+function content_panels_entity_insert($entity, $type) {
+  $query = drupal_get_query_parameters();
+  if (isset($query['content_panels_uuid'])) {
+    $uuid = $query['content_panels_uuid'];
+    try {
+      $entity_wrapper = entity_metadata_wrapper($type, $entity);
+      $bundle = $entity_wrapper->getBundle();
+      $row_id = db_query('SELECT id FROM {content_panels_uuid_entity}
+      WHERE uuid = :uuid
+      AND entity_type = :entity_type
+      AND bundle = :bundle', array(
+        ':uuid' => $uuid,
+        ':entity_type' => $type,
+        ':bundle' => $bundle,
+      ))->fetchField();
+      if ($row_id) {
+        $entity_id = $entity_wrapper->getIdentifier();
+        $record = array(
+          'id' => $row_id,
+          'entity_id' => $entity_id,
+        );
+        drupal_write_record('content_panels_uuid_entity', $record, 'id');
+      }
+    }
+    catch (EntityMetadataWrapperException $e) {
+      watchdog('Content Panels Error', $e->getMessage());
+    }
+  }
+}
+
+/**
+ * Implements hook_entity_delete().
+ */
+function content_panels_entity_delete($entity, $type) {
+  try {
+    $entity_wrapper = entity_metadata_wrapper($type, $entity);
+    $entity_id = $entity_wrapper->getIdentifier();
+    $num_updated = db_update('content_panels_uuid_entity')
+      ->fields(array(
+        'entity_id' => 0,
+      ))
+      ->condition('entity_id', $entity_id)
+      ->condition('entity_type', $type)
+      ->execute();
+  }
+  catch (EntityMetadataWrapperException $e) {
+    watchdog('Content Panels Error', $e->getMessage());
+  }
+}
+
+/**
+ * Map entity_type and bundle to create path.
+ */
+function content_panel_get_entity_add_path($entity_type, $bundle) {
+  $path = '';
+  if ($entity_type === 'node') {
+    $path = 'node/add/' . $bundle;
+  }
+  else {
+    $parts = explode('_', $entity_type);
+    foreach ($parts as $part) {
+      $path .= $part . '/';
+    }
+    $path .= 'add';
+  }
+
+  $context = array(
+    'entity_type' => $entity_type,
+    'bundle' => $bundle,
+  );
+  drupal_alter('content_panel_get_entity_add_path', $path, $context);
+  return $path;
+}

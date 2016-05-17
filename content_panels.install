@@ -1,0 +1,61 @@
+<?php
+
+/**
+ * @file
+ * Install file for content_panels.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function content_panels_schema() {
+  $schema = array();
+
+  $schema['content_panels_uuid_entity'] = array(
+    'description' => 'Mapping table between uuids and entities',
+    'fields' => array(
+      'id' => array(
+        'description' => 'ID for this row',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'entity_type' => array(
+        'description' => 'Entity Type',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'bundle' => array(
+        'description' => 'Bundle',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'uuid' => array(
+        'description' => 'Pane UUID',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'entity_id' => array(
+        'description' => 'Entity ID',
+        'type' => 'int',
+        'unsgined' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'indexes' => array(
+      'entity_id' => array('entity_id'),
+      'uuid' => array('uuid'),
+      'entity_type' => array('entity_type'),
+      'bundle' => array('bundle'),
+    ),
+    'primary key' => array('id'),
+  );
+
+  return $schema;
+}
