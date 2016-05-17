@@ -68,6 +68,126 @@ function content_panels_entity_delete($entity, $type) {
 }
 
 /**
+ * Returns an edit form for custom type settings.
+ */
+function content_panel_edit_form($form, &$form_state) {
+  $conf = $form_state['conf'];
+  $info = entity_get_info();
+  $entity_type = 'node';
+  if (!empty($form_state['values']['entity_type'])) {
+    $entity_type = $form_state['values']['entity_type'];
+  }
+  elseif (!empty($conf['entity_type'])) {
+    $entity_type = $conf['entity_type'];
+  }
+
+  // @TODO: AJAX FOR CHANGING VIEW MODE.
+
+  $form['entity_type'] = array(
+    '#title' => t('Entity Type'),
+    '#type' => 'select',
+    '#options' => content_panel_get_entity_options($info),
+    '#default_value' => $entity_type,
+    '#required' => TRUE,
+    '#ajax' => array(
+      'callback' => 'content_panel_entity_type_callback',
+      'wrapper' => 'bundle-replace',
+    ),
+  );
+
+  $form['bundle'] = array(
+    '#title' => t('Bundle'),
+    '#type' => 'select',
+    '#prefix' => '<div id="bundle-replace">',
+    '#suffix' => '</div>',
+    '#options' => content_panel_get_bundle_options($info, $entity_type),
+    '#default_value' => isset($conf['bundle']) ? $conf['bundle'] : '',
+    '#required' => TRUE,
+  );
+
+  $form['view_mode'] = array(
+    '#title' => t('View Mode'),
+    '#type' => 'select',
+    '#options' => content_panel_get_view_mode_options($info, $entity_type),
+    '#default_value' => isset($conf['view_mode']) ? $conf['view_mode'] : '',
+    '#required' => TRUE,
+  );
+
+  return $form;
+}
+
+/**
+ * Entity type change callback.
+ */
+function content_panel_entity_type_callback($form, $form_state) {
+  return $form['bundle'];
+}
+
+/**
+ * Submit handler for the custom type settings form.
+ */
+function content_panel_edit_form_submit($form, &$form_state) {
+  foreach (array_keys($form_state['plugin']['defaults']) as $key) {
+    if ($key !== 'uuid') {
+      // UUID deserves special treatment.
+      $form_state['conf'][$key] = $form_state['values'][$key];
+    }
+  }
+
+  // Append uuid to config to use it in render.
+  $display = $form_state['display'];
+  if (empty($form_state['conf']['uuid'])) {
+    $form_state['conf']['uuid'] = ctools_uuid_generate();
+  }
+  $record = array(
+    'uuid' => $form_state['conf']['uuid'],
+    'entity_type' => $form_state['conf']['entity_type'],
+    'bundle' => $form_state['conf']['bundle'],
+  );
+  drupal_write_record('content_panels_uuid_entity', $record);
+}
+
+/**
+ * Get entity type options.
+ */
+function content_panel_get_entity_options($info) {
+  $options = array();
+  foreach ($info as $entity_type_name => $entity_type_info) {
+    // We don't want comments and vocabularies.
+    if ($entity_type_name !== 'comment' && $entity_type_name !== 'taxonomy_vocabulary') {
+      $options[$entity_type_name] = $entity_type_info['label'];
+    }
+  }
+  return $options;
+}
+
+/**
+ * Get entity type bundle options.
+ */
+function content_panel_get_bundle_options($info, $entity_type) {
+  $options = array();
+  if (isset($info[$entity_type])) {
+    foreach ($info[$entity_type]['bundles'] as $bundle_name => $bundle_info) {
+      $options[$bundle_name] = $bundle_info['label'];
+    }
+  }
+  return $options;
+}
+
+/**
+ * Get entity type view_mode options.
+ */
+function content_panel_get_view_mode_options($info, $entity_type) {
+  $options = array();
+  if (isset($info[$entity_type])) {
+    foreach ($info[$entity_type]['view modes'] as $view_mode_name => $view_mode_info) {
+      $options[$view_mode_name] = $view_mode_info['label'];
+    }
+  }
+  return $options;
+}
+
+/**
  * Map entity_type and bundle to create path.
  */
 function content_panel_get_entity_add_path($entity_type, $bundle) {
