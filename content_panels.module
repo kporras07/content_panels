@@ -24,22 +24,17 @@ function content_panels_entity_insert($entity, $type) {
     try {
       $entity_wrapper = entity_metadata_wrapper($type, $entity);
       $bundle = $entity_wrapper->getBundle();
-      $row_id = db_query('SELECT id FROM {content_panels_uuid_entity}
-      WHERE uuid = :uuid
-      AND entity_type = :entity_type
-      AND bundle = :bundle', array(
-        ':uuid' => $uuid,
-        ':entity_type' => $type,
-        ':bundle' => $bundle,
-      ))->fetchField();
-      if ($row_id) {
-        $entity_id = $entity_wrapper->getIdentifier();
-        $record = array(
-          'id' => $row_id,
-          'entity_id' => $entity_id,
-        );
-        drupal_write_record('content_panels_uuid_entity', $record, 'id');
-      }
+      $entity_id = $entity_wrapper->getIdentifier();
+      $record = array(
+        'entity_id' => $entity_id,
+        'entity_type' => $type,
+        'uuid' => $uuid,
+        'bundle' => $bundle,
+      );
+      db_merge('content_panels_uuid_entity')
+        ->key(array('uuid' => $uuid))
+        ->fields($record)
+        ->execute();
     }
     catch (EntityMetadataWrapperException $e) {
       watchdog('Content Panels Error', $e->getMessage());
